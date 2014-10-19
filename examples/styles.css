@@ -1,0 +1,14 @@
+html, body, #map-canvas {
+	height: 100%;
+	margin: 0px;
+	padding: 0px;
+}
+#bounds {
+	position: absolute;
+	background: rgba(255, 255, 255, 0.7);
+	bottom: 20px;
+	right: 20px;
+	padding: 30px;
+	line-height: 2;
+	font-family: monospace;
+}
