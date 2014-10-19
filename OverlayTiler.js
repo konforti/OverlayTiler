@@ -1,4 +1,8 @@
 var overlaytiler = overlaytiler || {};
+var overlay = overlay || null;
+var dots = dots || [];
+var opacity = opacity || null;
+
 'use strict';
 
 ////////////////////////
@@ -11,6 +15,7 @@ var overlaytiler = overlaytiler || {};
  * @param {google.maps.Map} map
  */
 overlaytiler.Load = function ( data, map, callback ) {
+
   var img = new Image();
   img.src = data.src;
 
@@ -20,10 +25,13 @@ overlaytiler.Load = function ( data, map, callback ) {
   }
 
   else {
-    var overlay = new overlaytiler.Overlay( data );
+    if ( overlay ) {
+      overlay.setMap( null );
+    }
+    overlay = new overlaytiler.Overlay( data );
     overlay.setMap( map );
 
-    var opacity = new overlaytiler.Opacity( overlay );
+    new overlaytiler.Opacity( overlay );
     map.controls[google.maps.ControlPosition.BOTTOM_LEFT].push( opacity.getElement() );
 
     if ( callback ) {
@@ -222,6 +230,21 @@ overlaytiler.Overlay.prototype.draw = function () {
  * @inheritDoc
  */
 overlaytiler.Overlay.prototype.onRemove = function () {
+  if ( this.canvas_ ) {
+    this.canvas_.parentNode.removeChild( this.canvas_ );
+    this.canvas_ = null;
+  }
+
+  if ( opacity ) {
+    var opa = opacity.getElement();
+    opa.parentNode.removeChild( opa );
+    opacity = null;
+  }
+
+  for ( var i = 0, dot; dot = dots[i]; ++i ) {
+    dot.getCanvas().parentNode.removeChild( dot.getCanvas() );
+    dot = [];
+  }
 };
 
 /**
@@ -293,6 +316,8 @@ overlaytiler.Dot = function ( parent, x, y, id ) {
 
   this.style = canvas.style;
   this.render();
+
+  dots.push( this );
 };
 
 /**
@@ -472,6 +497,7 @@ overlaytiler.Opacity = function ( overlay ) {
 
   this.overlay = overlay;
   this.el_ = el;
+  opacity = this;
 };
 
 /**

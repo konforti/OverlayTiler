@@ -12,3 +12,10 @@ html, body, #map-canvas {
 	line-height: 2;
 	font-family: monospace;
 }
+#img-url {
+	position: absolute;
+	top: 30px;
+	left: calc(50% - 200px);
+	padding: 10px;
+	width: 400px;
+}
