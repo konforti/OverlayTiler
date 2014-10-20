@@ -1,3 +1,7 @@
+// OverlayTiler.js
+// Copyright (c) 2014 Heganoo
+// https://github.com/heganoo/OverlayTiler
+
 var overlaytiler = overlaytiler || {};
 var overlay = overlay || null;
 var dots = dots || [];
@@ -28,13 +32,13 @@ overlaytiler.Load = function ( data, map, callback ) {
     if ( overlay ) {
       overlay.setMap( null );
     }
-    overlay = new overlaytiler.Overlay( data );
+    overlay = new overlaytiler.Overlay( data, img );
     overlay.setMap( map );
 
     new overlaytiler.Opacity( overlay );
     map.controls[google.maps.ControlPosition.BOTTOM_LEFT].push( opacity.getElement() );
 
-    if ( callback ) {
+    if ( typeof callback === 'function' ) {
       callback( overlay );
     }
   }
@@ -51,10 +55,7 @@ overlaytiler.Load = function ( data, map, callback ) {
  * @extends google.maps.OverlayView
  * @param {!HTMLImageElement} img  The image to display.
  */
-overlaytiler.Overlay = function ( data ) {
-  if ( !data || !data.src ) {
-    return;
-  }
+overlaytiler.Overlay = function ( data, img ) {
 
   var canvas = this.canvas_ = document.createElement( 'canvas' );
   // TODO: calculate the width/height on the fly in case it's larger than 2000px. This should be good enough for now.
@@ -62,10 +63,7 @@ overlaytiler.Overlay = function ( data ) {
   canvas.height = 2000;
   canvas.style.position = 'absolute';
   this.ctx = canvas.getContext( '2d' );
-
-  this.img_ = new Image();
-  this.img_.src = data.src;
-
+  this.img_ = img;
   this.data_ = data;
 };
 
@@ -123,8 +121,6 @@ overlaytiler.Overlay.prototype.onAdd = function () {
     var sw = new google.maps.LatLng( this.data_.sw.lat, this.data_.sw.lng );
     overlaytiler.bounds.extend( ne );
     overlaytiler.bounds.extend( sw );
-    var map = this.getMap();
-    map.fitBounds( overlaytiler.bounds );
     tr = proj.fromLatLngToContainerPixel( ne );
     bl = proj.fromLatLngToContainerPixel( sw );
   }
@@ -382,11 +378,11 @@ overlaytiler.Dot.prototype.onMouseUp_ = function () {
  * @private
  */
 overlaytiler.Dot.prototype.fixDots_ = function () {
-  if ( this.id == 'ne' ) {
+  if ( this.id === 'ne' ) {
     this.x = overlaytiler.ImageSet.imgProp.NE_x;
     this.y = overlaytiler.ImageSet.imgProp.NE_y;
   }
-  else if ( this.id == 'sw' ) {
+  else if ( this.id === 'sw' ) {
     this.x = overlaytiler.ImageSet.imgProp.SW_x;
     this.y = overlaytiler.ImageSet.imgProp.SW_y;
   }
