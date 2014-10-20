@@ -3,9 +3,9 @@
 // https://github.com/heganoo/OverlayTiler
 
 var overlaytiler = overlaytiler || {};
-var overlay = overlay || null;
-var dots = dots || [];
-var opacity = opacity || null;
+overlaytiler.overlay = overlaytiler.overlay || null;
+overlaytiler.opacity = overlaytiler.opacity || null;
+overlaytiler.dots = overlaytiler.dots || [];
 
 'use strict';
 
@@ -29,17 +29,17 @@ overlaytiler.Load = function ( data, map, callback ) {
   }
 
   else {
-    if ( overlay ) {
-      overlay.setMap( null );
+    if ( overlaytiler.overlay ) {
+      overlaytiler.setMap( null );
     }
-    overlay = new overlaytiler.Overlay( data, img );
-    overlay.setMap( map );
+    overlaytiler.overlay = new overlaytiler.Overlay( data, img );
+    overlaytiler.overlay.setMap( map );
 
-    new overlaytiler.Opacity( overlay );
-    map.controls[google.maps.ControlPosition.BOTTOM_LEFT].push( opacity.getElement() );
+    new overlaytiler.Opacity( overlaytiler.overlay );
+    map.controls[google.maps.ControlPosition.BOTTOM_LEFT].push( overlaytiler.opacity.getElement() );
 
     if ( typeof callback === 'function' ) {
-      callback( overlay );
+      callback( overlaytiler.overlay );
     }
   }
 }
@@ -179,15 +179,15 @@ overlaytiler.Overlay.prototype.renderCanvas_ = function () {
  * @private
  */
 overlaytiler.Overlay.prototype.forceRenderCanvas_ = function () {
-  // make sure the whole image is in view.
-  var topLeft = this.getTopLeftPoint_();
-  this.canvas_.style.top = topLeft.y + 'px';
-  this.canvas_.style.left = topLeft.x + 'px';
+
+  var dots = this.dots_;
+  this.canvas_.style.left = dots[1].x + 'px';
+  this.canvas_.style.top = dots[0].y + 'px';
 
   var ctx = this.ctx;
   ctx.setTransform( 1, 0, 0, 1, 0, 0 ); // identity
   ctx.clearRect( 0, 0, this.canvas_.width, this.canvas_.height );
-  this.ti_.setTranslate( topLeft.x, topLeft.y );
+  this.ti_.setTranslate( dots[1].x, dots[0].y );
   this.ti_.draw( ctx );
 
   delete this.renderTimeout;
@@ -231,13 +231,13 @@ overlaytiler.Overlay.prototype.onRemove = function () {
     this.canvas_ = null;
   }
 
-  if ( opacity ) {
-    var opa = opacity.getElement();
+  if ( overlaytiler.opacity ) {
+    var opa = overlaytiler.opacity.getElement();
     opa.parentNode.removeChild( opa );
-    opacity = null;
+    overlaytiler.opacity = null;
   }
 
-  for ( var i = 0, dot; dot = dots[i]; ++i ) {
+  for ( var i = 0, dot; dot = overlaytiler.dots[i]; ++i ) {
     dot.getCanvas().parentNode.removeChild( dot.getCanvas() );
     dot = [];
   }
@@ -291,36 +291,36 @@ overlaytiler.Dot = function ( parent, x, y, id ) {
   this.x = x;
   this.y = y;
 
-  var canvas = this.canvas_ = document.createElement( 'div' );
-  canvas.className = 'dot';
-  canvas.style.position = 'absolute';
-  canvas.style.height = '6px';
-  canvas.style.width = '6px';
-  canvas.style.margin = '-6px';
-  canvas.style.borderRadius = '6px';
-  canvas.style.border = '3px solid rgb(240, 245, 34)';
-  canvas.style.cursor = 'crosshair';
-  parent.appendChild( canvas );
+  var el = this.el_ = document.createElement( 'div' );
+  el.className = 'dot';
+  el.style.position = 'absolute';
+  el.style.height = '6px';
+  el.style.width = '6px';
+  el.style.margin = '-6px';
+  el.style.borderRadius = '6px';
+  el.style.border = '3px solid rgb(240, 245, 34)';
+  el.style.cursor = 'crosshair';
+  parent.appendChild( el );
 
   this.id = id;
   this.onMouseMove_ = this.onMouseMove_.bind( this );
   this.onMouseDown_ = this.onMouseDown_.bind( this );
   this.onMouseUp_ = this.onMouseUp_.bind( this );
 
-  canvas.addEventListener( 'mousedown', this.onMouseDown_, true );
+  el.addEventListener( 'mousedown', this.onMouseDown_, true );
   window.addEventListener( 'mouseup', this.onMouseUp_, true );
 
-  this.style = canvas.style;
+  this.style = el.style;
   this.render();
 
-  dots.push( this );
+  overlaytiler.dots.push( this );
 };
 
 /**
  * @return {Element} the canvas.
  */
 overlaytiler.Dot.prototype.getCanvas = function () {
-  return this.canvas_;
+  return this.el_;
 };
 
 /**
@@ -493,7 +493,7 @@ overlaytiler.Opacity = function ( overlay ) {
 
   this.overlay = overlay;
   this.el_ = el;
-  opacity = this;
+  overlaytiler.opacity = this;
 };
 
 /**
@@ -522,7 +522,7 @@ overlaytiler.Opacity.prototype.getElement = function () {
  * @constructor
  * @param {!HTMLImageElement} img  the image to transform.
  * @param {overlaytiler.Dot} a  the top-left control point.
- * @param {overlaytiler.Dot} b  the top-right control point.
+ * @param {overlaytiler.Dot} b  the bottom-right control point.
  */
 overlaytiler.ImageSet = function ( img, a, b ) {
   this.img_ = img;
