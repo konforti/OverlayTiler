@@ -20,11 +20,11 @@
       overlaytiler.Load( imageOverlay, map, function ( overlay ) {
         overlay.afterRender = function () {
           var output = '';
-          var dots = overlay.getDotLatLngs();
-          output += 'NE lat: ' + dots[0].lat() + '<br>';
-          output += 'NE lng: ' + dots[0].lng() + '<br>';
-          output += 'SW lat: ' + dots[1].lat() + '<br>';
-          output += 'SW lng: ' + dots[1].lng();
+//          var dots = overlay.getDotLatLngs();
+//          output += 'NE lat: ' + dots[0].lat() + '<br>';
+//          output += 'NE lng: ' + dots[0].lng() + '<br>';
+//          output += 'SW lat: ' + dots[1].lat() + '<br>';
+//          output += 'SW lng: ' + dots[1].lng();
 
           document.getElementById( 'bounds' ).innerHTML = output;
         }
