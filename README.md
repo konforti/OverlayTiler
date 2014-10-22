@@ -30,7 +30,7 @@ var imgOverlay = {
 // Getting the GM overlay object in the callback.
 overlaytiler.Load(imgOverlay, map, function(overlay) {
 
-	// Use the overlay.getDotLatLngs() method for getting the image bounds.
+	// Use the overlay.getImgBounds() method for getting the image bounds.
 	// Implement the overlay.afterRender hook for constantly updated.
 
 })

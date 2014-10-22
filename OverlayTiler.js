@@ -25,12 +25,7 @@ overlaytiler.Load = function ( data, map, callback ) {
   var img = new Image();
   img.src = data.src;
 
-  // sometimes the image hasn't actually loaded
-  if ( !img.height ) {
-    setTimeout( this.Load.bind( this, data, map, callback ), 50 );
-  }
-
-  else {
+  img.onload = function() {
     if ( overlaytiler.overlay ) {
       overlaytiler.overlay.setMap( null );
     }
