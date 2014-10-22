@@ -31,6 +31,7 @@ var imgOverlay = {
 overlaytiler.Load(imgOverlay, map, function(overlay) {
 
 	// Use the overlay.getImgBounds() method for getting the image bounds.
+	// Implement the overlay.afterAdd hook for one time update.
 	// Implement the overlay.afterRender hook for constantly updated.
 
 })

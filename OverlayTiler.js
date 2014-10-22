@@ -76,7 +76,7 @@ overlaytiler.Overlay.prototype = new google.maps.OverlayView;
  * @type {number}
  * @private
  */
-overlaytiler.Overlay.prototype.bounds_ = [];
+overlaytiler.Overlay.prototype.bounds_;
 
 /**
  * * The overlay should be offset this number of pixels from the left of the map
@@ -102,6 +102,8 @@ overlaytiler.Overlay.prototype.DEFAULT_Y_OFFSET_ = 50;
  * a larger control point that sits in the middle of the image overlay.
  */
 overlaytiler.Overlay.prototype.onAdd = function () {
+  this.bounds_ = this.setImgBounds();
+
   // Set projection and pane.
   var proj = this.getProjection();
   var pane = this.getPanes().overlayImage;
@@ -156,6 +158,11 @@ overlaytiler.Overlay.prototype.onAdd = function () {
       this.renderImage_.bind( this ) );
 
   this.renderImage_();
+
+  // Invoke afterAdd hook.
+  if ( this.afterAdd ) {
+    this.afterAdd();
+  }
 };
 
 /**
@@ -203,15 +210,7 @@ overlaytiler.Overlay.prototype.renderImage_ = function () {
   this.renderTimeout = window.setTimeout(
       this.forceRenderImage_.bind( this ), 15 );
 
-  var proj = this.getProjection();
-  var img = this.img_;
-
-  // Get the LatLng value of the image bounds.
-  var swBound = proj.fromDivPixelToLatLng( new google.maps.Point( img.x, (img.y + img.height) ) );
-  var neBound = proj.fromDivPixelToLatLng( new google.maps.Point( (img.x + img.width), img.y ) );
-
-  // Update the bounds.
-  this.bounds_ = new google.maps.LatLngBounds(swBound, neBound);
+  this.setImgBounds();
 };
 
 /**
@@ -260,9 +259,7 @@ overlaytiler.Overlay.prototype.setOpacity = function ( opacity ) {
 /**
  * @inheritDoc
  */
-overlaytiler.Overlay.prototype.draw = function () {
-
-};
+overlaytiler.Overlay.prototype.draw = function () {};
 
 /**
  * @inheritDoc
@@ -291,13 +288,28 @@ overlaytiler.Overlay.prototype.onRemove = function () {
 };
 
 /**
- * Gets all LatLngs for each control resizer.
+ * Gets image bounds.
  *
  * @return {Array.<google.maps.LatLng>} LatLngs of control resizer.
  */
 overlaytiler.Overlay.prototype.getImgBounds = function () {
   return this.bounds_ ;
 };
+
+/**
+ * Sets image bounds.
+ */
+overlaytiler.Overlay.prototype.setImgBounds = function () {
+  var proj = this.getProjection();
+  var img = this.img_;
+
+  // Get the LatLng value of the image bounds.
+  var swBound = proj.fromDivPixelToLatLng( new google.maps.Point( img.x, (img.y + img.height) ) );
+  var neBound = proj.fromDivPixelToLatLng( new google.maps.Point( (img.x + img.width), img.y ) );
+
+  // Update the bounds.
+  this.bounds_ = new google.maps.LatLngBounds(swBound, neBound);
+}
 
 ////////////////////////
 /// The Resizer handles
