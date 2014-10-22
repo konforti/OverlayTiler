@@ -40,6 +40,10 @@ overlaytiler.Load = function ( data, map, callback ) {
     new overlaytiler.Opacity( overlaytiler.overlay );
     map.controls[google.maps.ControlPosition.BOTTOM_LEFT].push( overlaytiler.opacity.getElement() );
 
+    google.maps.event.addListener(map, 'zoom_changed', function() {
+      overlaytiler.overlay.calibrationRenderImage_();
+    });
+
     if ( typeof callback === 'function' ) {
       callback( overlaytiler.overlay );
     }
@@ -69,6 +73,15 @@ overlaytiler.Overlay = function ( data, img ) {
  * @type {google.maps.OverlayView}
  */
 overlaytiler.Overlay.prototype = new google.maps.OverlayView;
+
+/**
+ * * The overlay should be offset this number of pixels from the left of the map
+ * div when first added.
+ *
+ * @type {number}
+ * @private
+ */
+overlaytiler.Overlay.prototype.bounds_ = [];
 
 /**
  * * The overlay should be offset this number of pixels from the left of the map
@@ -151,7 +164,39 @@ overlaytiler.Overlay.prototype.onAdd = function () {
 };
 
 /**
- * Notify that the canvas should be rendered.
+ * Notify that the image should be rendered in calibration.
+ *
+ * @private
+ */
+overlaytiler.Overlay.prototype.calibrationRenderImage_ = function () {
+  var img = this.img_;
+  var resizer = this.resizer_;
+  var mover = this.mover_;
+  var bounds = this.bounds_;
+  var proj = this.getProjection();
+
+  // Get the pixel size from the image bounds.
+  var sw = proj.fromLatLngToDivPixel(bounds.getSouthWest());
+  var ne = proj.fromLatLngToDivPixel(bounds.getNorthEast());
+
+  // Set the image style.
+  img.style.left = sw.x + 'px';
+  img.style.top = ne.y + 'px';
+  img.style.width = (ne.x - sw.x) + 'px';
+
+  // Re-locate the mover handle.
+  mover.x = sw.x;
+  mover.y = ne.y;
+  mover.render();
+
+  // Re-locate the resizer handle.
+  resizer.x = ne.x;
+  resizer.y = sw.y;
+  resizer.render();
+};
+
+/**
+ * Notify that the image should be rendered.
  * Essentially limits rendering to a max of 66fps.
  *
  * @private
@@ -162,6 +207,16 @@ overlaytiler.Overlay.prototype.renderImage_ = function () {
   }
   this.renderTimeout = window.setTimeout(
       this.forceRenderImage_.bind( this ), 15 );
+
+  var proj = this.getProjection();
+  var img = this.img_;
+
+  // Get the LatLng value of the image bounds.
+  var swBound = proj.fromDivPixelToLatLng( new google.maps.Point( img.x, (img.y + img.height) ) );
+  var neBound = proj.fromDivPixelToLatLng( new google.maps.Point( (img.x + img.width), img.y ) );
+
+  // Update the bounds.
+  this.bounds_ = new google.maps.LatLngBounds(swBound, neBound);
 };
 
 /**
@@ -174,6 +229,7 @@ overlaytiler.Overlay.prototype.forceRenderImage_ = function () {
   var mover = this.mover_;
   var img = this.img_;
 
+  // Set the image style.
   img.style.left = mover.x + 'px';
   img.style.top = mover.y + 'px';
   img.style.width = (resizer.x - this.img_.x) + 'px';
@@ -181,6 +237,7 @@ overlaytiler.Overlay.prototype.forceRenderImage_ = function () {
   delete this.renderTimeout;
   google.maps.event.trigger( this, 'change' );
 
+  // Invoke afterRender hook.
   if ( this.afterRender ) {
     this.afterRender();
   }
@@ -209,7 +266,7 @@ overlaytiler.Overlay.prototype.setOpacity = function ( opacity ) {
  * @inheritDoc
  */
 overlaytiler.Overlay.prototype.draw = function () {
-  this.renderImage_();
+
 };
 
 /**
@@ -244,21 +301,7 @@ overlaytiler.Overlay.prototype.onRemove = function () {
  * @return {Array.<google.maps.LatLng>} LatLngs of control resizer.
  */
 overlaytiler.Overlay.prototype.getImgBounds = function () {
-  var proj = this.getProjection();
-  var img = this.img_;
-  var resizer = this.resizer_;
-
-  if ( !resizer ) {
-    setTimeout( this.getLatLngs.bind( this ), 50 );
-  }
-
-  else {
-    var swBound = proj.fromDivPixelToLatLng( new google.maps.Point( img.x, (img.y + img.height) ) );
-    var neBound = proj.fromDivPixelToLatLng( new google.maps.Point( (img.x + img.width), img.y ) );
-    var bounds = new google.maps.LatLngBounds(swBound, neBound);
-
-    return bounds;
-  }
+  return this.bounds_ ;
 };
 
 ////////////////////////

@@ -6,6 +6,7 @@
     var mapOptions = {
       zoom     : 15,
       center   : {lat: 51.5, lng: 0.12},
+      minZoom: 3,
       mapTypeId: google.maps.MapTypeId.SATELLITE
     };
 
