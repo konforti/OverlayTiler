@@ -102,9 +102,6 @@ overlaytiler.Overlay.prototype.DEFAULT_Y_OFFSET_ = 50;
  * a larger control point that sits in the middle of the image overlay.
  */
 overlaytiler.Overlay.prototype.onAdd = function () {
-
-  this.setImgBounds();
-
   // Set projection and pane.
   var proj = this.getProjection();
   var pane = this.getPanes().overlayImage;
@@ -155,6 +152,7 @@ overlaytiler.Overlay.prototype.onAdd = function () {
       this.renderImage_.bind( this ) );
 
   this.renderImage_();
+  this.setImgBounds();
 
   // Invoke afterAdd hook.
   if ( this.afterAdd ) {
@@ -303,10 +301,11 @@ overlaytiler.Overlay.prototype.getImgBounds = function () {
 overlaytiler.Overlay.prototype.setImgBounds = function () {
   var proj = this.getProjection();
   var img = this.img_;
+  var mover = this.mover_
 
   // Get the LatLng value of the image bounds.
-  var swBound = proj.fromDivPixelToLatLng( new google.maps.Point( img.x, (img.y + img.height) ) );
-  var neBound = proj.fromDivPixelToLatLng( new google.maps.Point( (img.x + img.width), img.y ) );
+  var swBound = proj.fromDivPixelToLatLng( new google.maps.Point( mover.x, ( mover.y + img.height ) ) );
+  var neBound = proj.fromDivPixelToLatLng( new google.maps.Point( ( mover.x + img.width ), mover.y ) );
 
   // Update the bounds.
   this.bounds_ = new google.maps.LatLngBounds(swBound, neBound);
