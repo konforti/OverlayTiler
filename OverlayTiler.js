@@ -2,48 +2,32 @@
 // Copyright (c) 2014 Heganoo
 // https://github.com/heganoo/OverlayTiler
 
-var overlaytiler = overlaytiler || {};
-overlaytiler.overlay = overlaytiler.overlay || null;
-overlaytiler.opacity = overlaytiler.opacity || null;
-
 'use strict';
 
-////////////////////////
-/// Load
-////////////////////////
+/**
+ * Set to OverlayView.
+ *
+ * @type {google.maps.OverlayView}
+ */
+OverlayTiler.prototype = new google.maps.OverlayView;
 
 /**
- * Adds an editable overlay to the map.
+ * * The overlay should be offset this number of pixels from the left of the map
+ * div when first added.
  *
- * @param data
- * @param map
- * @param callback
- * @constructor
+ * @type {number}
+ * @private
  */
-overlaytiler.Load = function ( data, map, callback ) {
+OverlayTiler.prototype.DEFAULT_X_ = 100;
 
-  var img = new Image();
-  img.src = data.src;
-
-  img.onload = function() {
-    if ( overlaytiler.overlay ) {
-      overlaytiler.overlay.setMap( null );
-    }
-    overlaytiler.overlay = new overlaytiler.Overlay( data, img );
-    overlaytiler.overlay.setMap( map );
-
-    new overlaytiler.Opacity( overlaytiler.overlay );
-    map.controls[google.maps.ControlPosition.BOTTOM_LEFT].push( overlaytiler.opacity.getElement() );
-
-    google.maps.event.addListener(map, 'zoom_changed', function() {
-      overlaytiler.overlay.calibrationRenderImage_();
-    });
-
-    if ( typeof callback === 'function' ) {
-      callback( overlaytiler.overlay );
-    }
-  }
-}
+/**
+ * The overlay should be offset this number of pixels from the top of the map
+ * div when first added.
+ *
+ * @type {number}
+ * @private
+ */
+OverlayTiler.prototype.DEFAULT_Y_ = 50;
 
 ////////////////////////
 /// The Overlay
@@ -56,62 +40,48 @@ overlaytiler.Load = function ( data, map, callback ) {
  * @param img
  * @constructor
  */
-overlaytiler.Overlay = function ( data, img ) {
+function OverlayTiler( data, map ) {
+  var self = this;
+  var img = new Image();
+  img.src = data.src;
   img.style.position = 'absolute';
   this.img_ = img;
   this.data_ = data;
+
+  img.onload = function () {
+    var opacity = new Opacity( self );
+    map.controls[google.maps.ControlPosition.BOTTOM_LEFT].push( opacity.getElement() );
+    self.opacity_ = opacity;
+
+    google.maps.event.addListener( map, 'zoom_changed', function () {
+      self.calibrationRenderImage_();
+    } );
+
+    self.setMap( map );
+
+    if ( self.afterLoad ) {
+      self.afterLoad( self );
+    }
+  }
 };
-
-/**
- * Set to OverlayView.
- *
- * @type {google.maps.OverlayView}
- */
-overlaytiler.Overlay.prototype = new google.maps.OverlayView;
-
-/**
- * * The overlay should be offset this number of pixels from the left of the map
- * div when first added.
- *
- * @type {number}
- * @private
- */
-overlaytiler.Overlay.prototype.bounds_;
-
-/**
- * * The overlay should be offset this number of pixels from the left of the map
- * div when first added.
- *
- * @type {number}
- * @private
- */
-overlaytiler.Overlay.prototype.DEFAULT_X_OFFSET_ = 100;
-
-/**
- * The overlay should be offset this number of pixels from the top of the map
- * div when first added.
- *
- * @type {number}
- * @private
- */
-overlaytiler.Overlay.prototype.DEFAULT_Y_OFFSET_ = 50;
 
 /**
  * Adds the image in the top left of the current map viewport.
  * The overlay can be transformed via three control points, and translated via
  * a larger control point that sits in the middle of the image overlay.
  */
-overlaytiler.Overlay.prototype.onAdd = function () {
+OverlayTiler.prototype.onAdd = function () {
   // Set projection and pane.
   var proj = this.getProjection();
   var pane = this.getPanes().overlayImage;
+  var data = this.data_;
 
   // Append the image as a layer to the map.
   this.getPanes().overlayLayer.appendChild( this.img_ );
 
   var topRight, bottomLeft, img = this.img_;
 
-  if ( this.data_.ne && this.data_.sw ) {
+  if ( data.ne && data.sw && data.ne.lat && data.ne.lng && data.sw.lat && data.sw.lng ) {
     // Set the bounds from external data.
     var ne = new google.maps.LatLng( this.data_.ne.lat, this.data_.ne.lng );
     var sw = new google.maps.LatLng( this.data_.sw.lat, this.data_.sw.lng );
@@ -121,12 +91,12 @@ overlaytiler.Overlay.prototype.onAdd = function () {
   }
   else {
     // // Set the bounds defaults.
-    topRight = new google.maps.Point( this.DEFAULT_X_OFFSET_ + img.width, this.DEFAULT_Y_OFFSET_ );
-    bottomLeft = new google.maps.Point( this.DEFAULT_X_OFFSET_, this.DEFAULT_Y_OFFSET_ + img.height );
+    topRight = new google.maps.Point( this.DEFAULT_X_ + img.width, this.DEFAULT_Y_ );
+    bottomLeft = new google.maps.Point( this.DEFAULT_X_, this.DEFAULT_Y_ + img.height );
   }
 
   // The Mover allows the overlay to be translated.
-  var mover = new overlaytiler.Mover( pane, bottomLeft.x, topRight.y, this );
+  var mover = new Mover( pane, bottomLeft.x, topRight.y, this );
   this.mover_ = mover;
 
   google.maps.event.addListener( mover, 'dragstart',
@@ -139,7 +109,7 @@ overlaytiler.Overlay.prototype.onAdd = function () {
       this.renderImage_.bind( this ) );
 
   // The Resizer allows the overlay to be resize.
-  var resizer = new overlaytiler.Resizer( pane, topRight.x, bottomLeft.y, this );
+  var resizer = new Resizer( pane, topRight.x, bottomLeft.y, this );
   this.resizer_ = resizer;
 
   google.maps.event.addListener( resizer, 'dragstart',
@@ -156,7 +126,7 @@ overlaytiler.Overlay.prototype.onAdd = function () {
 
   // Invoke afterAdd hook.
   if ( this.afterAdd ) {
-    this.afterAdd();
+    this.afterAdd( this );
   }
 };
 
@@ -165,7 +135,7 @@ overlaytiler.Overlay.prototype.onAdd = function () {
  *
  * @private
  */
-overlaytiler.Overlay.prototype.calibrationRenderImage_ = function () {
+OverlayTiler.prototype.calibrationRenderImage_ = function () {
   var img = this.img_;
   var resizer = this.resizer_;
   var mover = this.mover_;
@@ -173,8 +143,8 @@ overlaytiler.Overlay.prototype.calibrationRenderImage_ = function () {
   var proj = this.getProjection();
 
   // Get the pixel size from the image bounds.
-  var sw = proj.fromLatLngToDivPixel(bounds.getSouthWest());
-  var ne = proj.fromLatLngToDivPixel(bounds.getNorthEast());
+  var sw = proj.fromLatLngToDivPixel( bounds.getSouthWest() );
+  var ne = proj.fromLatLngToDivPixel( bounds.getNorthEast() );
 
   // Set the image style.
   img.style.left = sw.x + 'px';
@@ -202,7 +172,7 @@ overlaytiler.Overlay.prototype.calibrationRenderImage_ = function () {
  *
  * @private
  */
-overlaytiler.Overlay.prototype.renderImage_ = function () {
+OverlayTiler.prototype.renderImage_ = function () {
   if ( this.renderTimeout ) {
     return;
   }
@@ -217,7 +187,7 @@ overlaytiler.Overlay.prototype.renderImage_ = function () {
  *
  * @private
  */
-overlaytiler.Overlay.prototype.forceRenderImage_ = function () {
+OverlayTiler.prototype.forceRenderImage_ = function () {
   var resizer = this.resizer_;
   var mover = this.mover_;
   var img = this.img_;
@@ -232,7 +202,7 @@ overlaytiler.Overlay.prototype.forceRenderImage_ = function () {
 
   // Invoke afterRender hook.
   if ( this.afterRender ) {
-    this.afterRender();
+    this.afterRender( this );
   }
 };
 
@@ -242,8 +212,11 @@ overlaytiler.Overlay.prototype.forceRenderImage_ = function () {
  * @private
  * @param {boolean} draggable  Whether the map should be draggable.
  */
-overlaytiler.Overlay.prototype.setMapDraggable_ = function ( draggable ) {
-  this.getMap().set( 'draggable', draggable );
+OverlayTiler.prototype.setMapDraggable_ = function ( draggable ) {
+  var map = this.getMap();
+  if ( map ) {
+    map.set( 'draggable', draggable );
+  }
 };
 
 /**
@@ -251,19 +224,20 @@ overlaytiler.Overlay.prototype.setMapDraggable_ = function ( draggable ) {
  *
  * @param {number} opacity  The opacity, from 0.0 to 1.0.
  */
-overlaytiler.Overlay.prototype.setOpacity = function ( opacity ) {
+OverlayTiler.prototype.setOpacity = function ( opacity ) {
   this.img_.style.opacity = opacity;
 };
 
 /**
  * @inheritDoc
  */
-overlaytiler.Overlay.prototype.draw = function () {};
+OverlayTiler.prototype.draw = function () {
+};
 
 /**
  * @inheritDoc
  */
-overlaytiler.Overlay.prototype.onRemove = function () {
+OverlayTiler.prototype.onRemove = function () {
   // Remove the image.
   if ( this.img_ ) {
     this.img_.parentNode.removeChild( this.img_ );
@@ -271,10 +245,9 @@ overlaytiler.Overlay.prototype.onRemove = function () {
   }
 
   // Remove the opacity element.
-  if ( overlaytiler.opacity ) {
-    var opa = overlaytiler.opacity.getElement();
-    opa.parentNode.removeChild( opa );
-    overlaytiler.opacity = null;
+  if ( this.opacity_ ) {
+    this.opacity_.getElement().parentNode.removeChild( this.opacity_.getElement() );
+    this.opacity_ = null;
   }
 
   // Remove the resizer handle.
@@ -287,18 +260,9 @@ overlaytiler.Overlay.prototype.onRemove = function () {
 };
 
 /**
- * Gets image bounds.
- *
- * @return {Array.<google.maps.LatLng>} LatLngs of control resizer.
- */
-overlaytiler.Overlay.prototype.getImgBounds = function () {
-  return this.bounds_ ;
-};
-
-/**
  * Sets image bounds.
  */
-overlaytiler.Overlay.prototype.setImgBounds = function () {
+OverlayTiler.prototype.setImgBounds = function () {
   var proj = this.getProjection();
   var img = this.img_;
   var mover = this.mover_
@@ -308,7 +272,11 @@ overlaytiler.Overlay.prototype.setImgBounds = function () {
   var neBound = proj.fromDivPixelToLatLng( new google.maps.Point( ( mover.x + img.width ), mover.y ) );
 
   // Update the bounds.
-  this.bounds_ = new google.maps.LatLngBounds(swBound, neBound);
+  this.bounds_ = new google.maps.LatLngBounds( swBound, neBound );
+}
+
+OverlayTiler.prototype.getImgBounds = function () {
+  return this.bounds_;
 }
 
 ////////////////////////
@@ -324,7 +292,7 @@ overlaytiler.Overlay.prototype.setImgBounds = function () {
  *    this resizer.
  * @extends overlaytiler.Resizer
  */
-overlaytiler.Mover = function ( parent, x, y, overlay ) {
+function Mover( parent, x, y, overlay ) {
 
   var el = this.el_ = document.createElement( 'div' );
   el.className += ' mover';
@@ -336,7 +304,7 @@ overlaytiler.Mover = function ( parent, x, y, overlay ) {
   el.style.background = 'yellow';
   el.style.width = '24px';
   el.style.height = '24px';
-  el.style.textAlign =  'center';
+  el.style.textAlign = 'center';
   el.style.lineHeight = '1';
   el.style.margin = '-10px';
   el.style.cursor = 'move';
@@ -360,15 +328,15 @@ overlaytiler.Mover = function ( parent, x, y, overlay ) {
 /**
  * @returns {HTMLElement|*}
  */
-overlaytiler.Mover.prototype.getElement = function () {
+Mover.prototype.getElement = function () {
   return this.el_;
 };
 
 /**
  * Renders this mover to the page, at its location.
  */
-overlaytiler.Mover.prototype.render = function () {
-  this.style.left = this.x +'px';
+Mover.prototype.render = function () {
+  this.style.left = this.x + 'px';
   this.style.top = this.y + 'px';
   google.maps.event.trigger( this, 'change' );
 };
@@ -380,7 +348,7 @@ overlaytiler.Mover.prototype.render = function () {
  * @param {MouseEvent} e  the event containing coordinates of current mouse
  * position.
  */
-overlaytiler.Mover.prototype.onMouseMove_ = function ( e ) {
+Mover.prototype.onMouseMove_ = function ( e ) {
   this.x += e.clientX - this.cx;
   this.y += e.clientY - this.cy;
 
@@ -404,7 +372,7 @@ overlaytiler.Mover.prototype.onMouseMove_ = function ( e ) {
  * @param {MouseEvent} e  the event containing coordinates of current mouse
  * position.
  */
-overlaytiler.Mover.prototype.onMouseDown_ = function ( e ) {
+Mover.prototype.onMouseDown_ = function ( e ) {
   this.cx = e.clientX;
   this.cy = e.clientY;
   this.mouseMoveListener_ = google.maps.event.addDomListener( window, 'mousemove', this.onMouseMove_.bind( this ) );
@@ -416,7 +384,7 @@ overlaytiler.Mover.prototype.onMouseDown_ = function ( e ) {
  *
  * @private
  */
-overlaytiler.Mover.prototype.onMouseUp_ = function () {
+Mover.prototype.onMouseUp_ = function () {
   if ( this.mouseMoveListener_ ) {
     google.maps.event.removeListener( this.mouseMoveListener_ );
   }
@@ -436,7 +404,7 @@ overlaytiler.Mover.prototype.onMouseUp_ = function () {
  * @param img
  * @constructor
  */
-overlaytiler.Resizer = function ( parent, x, y, overlay ) {
+function Resizer( parent, x, y, overlay ) {
 
   var el = this.el_ = document.createElement( 'div' );
   el.className = 'resizer';
@@ -448,7 +416,7 @@ overlaytiler.Resizer = function ( parent, x, y, overlay ) {
   el.style.background = 'yellow';
   el.style.width = '24px';
   el.style.height = '24px';
-  el.style.textAlign =  'center';
+  el.style.textAlign = 'center';
   el.style.lineHeight = '1';
   el.style.margin = '-18px';
   el.style.cursor = 'nwse-resize';
@@ -471,18 +439,18 @@ overlaytiler.Resizer = function ( parent, x, y, overlay ) {
 /**
  * @returns {HTMLElement|*}
  */
-overlaytiler.Resizer.prototype.getElement = function () {
+Resizer.prototype.getElement = function () {
   return this.el_;
 };
 
 /**
  * Renders this resizer to the page, at its location.
  */
-overlaytiler.Resizer.prototype.render = function () {
+Resizer.prototype.render = function () {
   var mover = this.overlay_.mover_;
   var img = this.overlay_.img_;
 
-  this.style.left = (mover.x + img.width) +'px';
+  this.style.left = (mover.x + img.width) + 'px';
   this.style.top = (mover.y + img.height) + 'px';
 
   google.maps.event.trigger( this, 'change' );
@@ -495,7 +463,7 @@ overlaytiler.Resizer.prototype.render = function () {
  * @param {MouseEvent} e  the event containing coordinates of current mouse
  * position.
  */
-overlaytiler.Resizer.prototype.onMouseMove_ = function ( e ) {
+Resizer.prototype.onMouseMove_ = function ( e ) {
   this.x += e.clientX - this.cx;
   this.y += e.clientY - this.cy;
 
@@ -512,7 +480,7 @@ overlaytiler.Resizer.prototype.onMouseMove_ = function ( e ) {
  * @param {MouseEvent} e  the event containing coordinates of current mouse
  * position.
  */
-overlaytiler.Resizer.prototype.onMouseDown_ = function ( e ) {
+Resizer.prototype.onMouseDown_ = function ( e ) {
   this.cx = e.clientX;
   this.cy = e.clientY;
   this.mouseMoveListener_ = google.maps.event.addDomListener( window, 'mousemove', this.onMouseMove_.bind( this ) );
@@ -524,7 +492,7 @@ overlaytiler.Resizer.prototype.onMouseDown_ = function ( e ) {
  *
  * @private
  */
-overlaytiler.Resizer.prototype.onMouseUp_ = function () {
+Resizer.prototype.onMouseUp_ = function () {
   if ( this.mouseMoveListener_ ) {
     google.maps.event.removeListener( this.mouseMoveListener_ );
   }
@@ -541,8 +509,8 @@ overlaytiler.Resizer.prototype.onMouseUp_ = function () {
  * @constructor
  * @param {overlaytiler.Overlay} overlay  the overlay to control.
  */
-overlaytiler.Opacity = function ( overlay ) {
-  var el = document.createElement( 'input' );
+function Opacity( overlay ) {
+  var el = this.el_ = document.createElement( 'input' );
   el.type = 'range';
   el.min = 0;
   el.max = 100;
@@ -550,9 +518,7 @@ overlaytiler.Opacity = function ( overlay ) {
   el.style.width = '200px';
   el.onchange = this.onChange_.bind( this );
 
-  this.overlay = overlay;
-  this.el_ = el;
-  overlaytiler.opacity = this;
+  this.overlay_ = overlay;
 };
 
 /**
@@ -560,8 +526,9 @@ overlaytiler.Opacity = function ( overlay ) {
  *
  * @private
  */
-overlaytiler.Opacity.prototype.onChange_ = function () {
-  this.overlay.setOpacity( this.el_.value / 100 );
+Opacity.prototype.onChange_ = function () {
+  var overlay = this.overlay_;
+  overlay.setOpacity( this.el_.value / 100 );
 };
 
 /**
@@ -569,6 +536,6 @@ overlaytiler.Opacity.prototype.onChange_ = function () {
  *
  * @return {Element}  the Element.
  */
-overlaytiler.Opacity.prototype.getElement = function () {
+Opacity.prototype.getElement = function () {
   return this.el_;
 };

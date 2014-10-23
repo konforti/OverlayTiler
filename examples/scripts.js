@@ -18,10 +18,10 @@
     };
 
     function load() {
-      overlaytiler.Load( imageOverlay, map, function ( overlay ) {
-        overlay.afterRender = function () {
+      var l = new OverlayTiler(imageOverlay, map);
+        l.afterRender = function () {
           var output = '';
-          var bounds = overlay.getImgBounds();
+          var bounds = l.getImgBounds();
           var sw = bounds.getSouthWest();
           var ne = bounds.getNorthEast();
           output += 'SW lat: ' + sw.lat() + '<br>';
@@ -32,7 +32,6 @@
 
           document.getElementById( 'bounds' ).innerHTML = output;
         }
-      } );
     }
 
     load();
