@@ -42,9 +42,11 @@ OverlayTiler.prototype.DEFAULT_Y_ = 50;
  */
 function OverlayTiler( data, map ) {
   var self = this;
+
   var img = new Image();
   img.src = data.src;
   img.style.position = 'absolute';
+
   this.img_ = img;
   this.data_ = data;
 
@@ -251,12 +253,16 @@ OverlayTiler.prototype.onRemove = function () {
   }
 
   // Remove the resizer handle.
-  this.resizer_.getElement().parentNode.removeChild( this.resizer_.getElement() );
-  this.resizer_ = null;
+  if ( this.resizer_ ) {
+    this.resizer_.getElement().parentNode.removeChild( this.resizer_.getElement() );
+    this.resizer_ = null;
+  }
 
   // Remove the mover handle.
-  this.mover_.getElement().parentNode.removeChild( this.mover_.getElement() );
-  this.mover_ = null;
+  if ( this.mover_ ) {
+    this.mover_.getElement().parentNode.removeChild( this.mover_.getElement() );
+    this.mover_ = null;
+  }
 };
 
 /**
@@ -277,6 +283,10 @@ OverlayTiler.prototype.setImgBounds = function () {
 
 OverlayTiler.prototype.getImgBounds = function () {
   return this.bounds_;
+}
+
+OverlayTiler.prototype.destroy = function () {
+  this.setMap( null );
 }
 
 ////////////////////////

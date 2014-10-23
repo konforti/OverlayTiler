@@ -1,4 +1,6 @@
 (function () {
+  var overlay;
+
   /**
    * Initialize Google Maps map.
    */
@@ -6,7 +8,7 @@
     var mapOptions = {
       zoom     : 15,
       center   : {lat: 51.5, lng: 0.12},
-      minZoom: 3,
+      minZoom  : 3,
       mapTypeId: google.maps.MapTypeId.SATELLITE
     };
 
@@ -18,7 +20,11 @@
     };
 
     function load() {
-      var overlay = new OverlayTiler(imageOverlay, map);
+      if ( overlay ) {
+        overlay.destroy();
+        overlay = null;
+      }
+      overlay = new OverlayTiler( imageOverlay, map );
       overlay.afterRender = function () {
 
         var bounds = overlay.getImgBounds();
@@ -30,7 +36,6 @@
         output += 'SW lng: ' + sw.lng() + '<br>';
         output += 'NE lat: ' + ne.lat() + '<br>';
         output += 'NE lng: ' + ne.lng();
-
 
         document.getElementById( 'bounds' ).innerHTML = output;
       }
