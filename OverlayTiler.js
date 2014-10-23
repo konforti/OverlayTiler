@@ -60,7 +60,7 @@ function OverlayTiler( data, map ) {
     self.setMap( map );
 
     if ( self.afterLoad ) {
-      self.afterLoad( self );
+      self.afterLoad();
     }
   }
 };
@@ -126,7 +126,7 @@ OverlayTiler.prototype.onAdd = function () {
 
   // Invoke afterAdd hook.
   if ( this.afterAdd ) {
-    this.afterAdd( this );
+    this.afterAdd();
   }
 };
 
@@ -202,7 +202,7 @@ OverlayTiler.prototype.forceRenderImage_ = function () {
 
   // Invoke afterRender hook.
   if ( this.afterRender ) {
-    this.afterRender( this );
+    this.afterRender();
   }
 };
 

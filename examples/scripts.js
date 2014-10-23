@@ -18,20 +18,22 @@
     };
 
     function load() {
-      var l = new OverlayTiler(imageOverlay, map);
-        l.afterRender = function () {
-          var output = '';
-          var bounds = l.getImgBounds();
-          var sw = bounds.getSouthWest();
-          var ne = bounds.getNorthEast();
-          output += 'SW lat: ' + sw.lat() + '<br>';
-          output += 'SW lng: ' + sw.lng() + '<br>';
-          output += 'NE lat: ' + ne.lat() + '<br>';
-          output += 'NE lng: ' + ne.lng();
+      var overlay = new OverlayTiler(imageOverlay, map);
+      overlay.afterRender = function () {
+
+        var bounds = overlay.getImgBounds();
+        var sw = bounds.getSouthWest();
+        var ne = bounds.getNorthEast();
+
+        var output = '';
+        output += 'SW lat: ' + sw.lat() + '<br>';
+        output += 'SW lng: ' + sw.lng() + '<br>';
+        output += 'NE lat: ' + ne.lat() + '<br>';
+        output += 'NE lng: ' + ne.lng();
 
 
-          document.getElementById( 'bounds' ).innerHTML = output;
-        }
+        document.getElementById( 'bounds' ).innerHTML = output;
+      }
     }
 
     load();

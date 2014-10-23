@@ -26,13 +26,58 @@ var imgOverlay = {
 //  }
 }
 
-// Calling the Load method with the image-overlay object and the map.
-// Getting the GM overlay object in the callback.
-overlaytiler.Load(imgOverlay, map, function(overlay) {
+// Load the image overlay.
+var overlay = new OverlayTiler( imageOverlay, map );
 
-	// Use the overlay.getImgBounds() method for getting the image bounds.
-	// Implement the overlay.afterAdd hook for one time update.
-	// Implement the overlay.afterRender hook for constantly updated.
-
-})
 ```
+
+Hooks:
+```js
+
+//  Run after image load.
+overlay.afterLoad() = function() {};
+
+// Run after overlay added.
+overlay.afterAdd() = function() {};
+
+// Run after each overlay render
+overlay.afterRender() = function() {};
+
+```
+
+Functions:
+```js
+
+//  Return the current bounds of the image.
+var bounds = overlay.getImgBounds();
+
+```
+
+Usage Example:
+```js
+
+// Initialize an overlay.
+var overlay = new OverlayTiler( imageOverlay, map );
+
+// Constantly update.
+overlay.afterRender = function () {
+
+	// Get the current image bounds.
+	var bounds = overlay.getImgBounds();
+	var sw = bounds.getSouthWest();
+	var ne = bounds.getNorthEast();
+
+	// Set an updated output.
+	var output = '';
+	output += 'SW lat: ' + sw.lat() + '<br>';
+	output += 'SW lng: ' + sw.lng() + '<br>';
+	output += 'NE lat: ' + ne.lat() + '<br>';
+	output += 'NE lng: ' + ne.lng();
+
+	// Update the DOM.
+	document.getElementById( 'bounds' ).innerHTML = output;
+
+}
+
+```
+
