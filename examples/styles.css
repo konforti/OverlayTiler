@@ -19,3 +19,7 @@ html, body, #map-canvas {
 	padding: 10px;
 	width: 400px;
 }
+
+#map-canvas {
+	margin-left: 400px;
+}

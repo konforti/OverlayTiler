@@ -102,7 +102,8 @@ overlaytiler.Overlay.prototype.DEFAULT_Y_OFFSET_ = 50;
  * a larger control point that sits in the middle of the image overlay.
  */
 overlaytiler.Overlay.prototype.onAdd = function () {
-  this.bounds_ = this.setImgBounds();
+
+  this.setImgBounds();
 
   // Set projection and pane.
   var proj = this.getProjection();
@@ -127,25 +128,8 @@ overlaytiler.Overlay.prototype.onAdd = function () {
     bottomLeft = new google.maps.Point( this.DEFAULT_X_OFFSET_, this.DEFAULT_Y_OFFSET_ + img.height );
   }
 
-  // Set the image top/left position,
-  this.img_.style.left = bottomLeft.x + 'px';
-  this.img_.style.top = topRight.y + 'px';
-
-  // The Resizer allows the overlay to be resize.
-  var resizer = new overlaytiler.Resizer( pane, topRight.x, bottomLeft.y, img )
-  this.resizer_ = resizer;
-
-  google.maps.event.addListener( resizer, 'dragstart',
-      this.setMapDraggable_.bind( this, false ) );
-
-  google.maps.event.addListener( resizer, 'dragend',
-      this.setMapDraggable_.bind( this, true ) );
-
-  google.maps.event.addListener( resizer, 'change',
-      this.renderImage_.bind( this ) );
-
   // The Mover allows the overlay to be translated.
-  var mover = new overlaytiler.Mover( pane, bottomLeft.x, topRight.y, resizer, img );
+  var mover = new overlaytiler.Mover( pane, bottomLeft.x, topRight.y, this );
   this.mover_ = mover;
 
   google.maps.event.addListener( mover, 'dragstart',
@@ -155,6 +139,19 @@ overlaytiler.Overlay.prototype.onAdd = function () {
       this.setMapDraggable_.bind( this, true ) );
 
   google.maps.event.addListener( mover, 'change',
+      this.renderImage_.bind( this ) );
+
+  // The Resizer allows the overlay to be resize.
+  var resizer = new overlaytiler.Resizer( pane, topRight.x, bottomLeft.y, this );
+  this.resizer_ = resizer;
+
+  google.maps.event.addListener( resizer, 'dragstart',
+      this.setMapDraggable_.bind( this, false ) );
+
+  google.maps.event.addListener( resizer, 'dragend',
+      this.setMapDraggable_.bind( this, true ) );
+
+  google.maps.event.addListener( resizer, 'change',
       this.renderImage_.bind( this ) );
 
   this.renderImage_();
@@ -195,6 +192,10 @@ overlaytiler.Overlay.prototype.calibrationRenderImage_ = function () {
   resizer.x = ne.x;
   resizer.y = sw.y;
   resizer.render();
+
+  delete this.renderTimeout;
+  google.maps.event.trigger( this, 'change' );
+
 };
 
 /**
@@ -226,7 +227,7 @@ overlaytiler.Overlay.prototype.forceRenderImage_ = function () {
   // Set the image style.
   img.style.left = mover.x + 'px';
   img.style.top = mover.y + 'px';
-  img.style.width = (resizer.x - this.img_.x) + 'px';
+  img.style.width = (resizer.x - mover.x) + 'px';
 
   delete this.renderTimeout;
   google.maps.event.trigger( this, 'change' );
@@ -312,6 +313,118 @@ overlaytiler.Overlay.prototype.setImgBounds = function () {
 }
 
 ////////////////////////
+/// The Mover handle
+////////////////////////
+
+/**
+ * Creates a mover (big resizer) that moves a bunch of other resizer.
+ *
+ * @constructor
+ * @param {Node} parent  the element to attach this resizer to.
+ * @param {Array.<overlaytiler.Resizer>} resizer  the resizer that should be moved with
+ *    this resizer.
+ * @extends overlaytiler.Resizer
+ */
+overlaytiler.Mover = function ( parent, x, y, overlay ) {
+
+  var el = this.el_ = document.createElement( 'div' );
+  el.className += ' mover';
+  el.innerText += '☐';
+  el.style.position = 'absolute';
+  el.style.color = 'black';
+  el.style.fontSize = '24px';
+  el.style.fontWeight = 'bold';
+  el.style.background = 'yellow';
+  el.style.width = '24px';
+  el.style.height = '24px';
+  el.style.textAlign =  'center';
+  el.style.lineHeight = '1';
+  el.style.margin = '-10px';
+  el.style.cursor = 'move';
+  parent.appendChild( el );
+  el.onMouseMove_ = this.onMouseMove_.bind( el );
+
+  this.onMouseMove_ = this.onMouseMove_.bind( this );
+  this.onMouseDown_ = this.onMouseDown_.bind( this );
+  this.onMouseUp_ = this.onMouseUp_.bind( this );
+
+  el.addEventListener( 'mousedown', this.onMouseDown_, true );
+  window.addEventListener( 'mouseup', this.onMouseUp_, true );
+
+  this.x = x;
+  this.y = y;
+  this.overlay_ = overlay;
+  this.style = el.style;
+  this.render();
+};
+
+/**
+ * @returns {HTMLElement|*}
+ */
+overlaytiler.Mover.prototype.getElement = function () {
+  return this.el_;
+};
+
+/**
+ * Renders this mover to the page, at its location.
+ */
+overlaytiler.Mover.prototype.render = function () {
+  this.style.left = this.x +'px';
+  this.style.top = this.y + 'px';
+  google.maps.event.trigger( this, 'change' );
+};
+
+/**
+ * Moves the resizer to the current mouse position.
+ *
+ * @private
+ * @param {MouseEvent} e  the event containing coordinates of current mouse
+ * position.
+ */
+overlaytiler.Mover.prototype.onMouseMove_ = function ( e ) {
+  this.x += e.clientX - this.cx;
+  this.y += e.clientY - this.cy;
+
+  var resizer = this.overlay_.resizer_;
+  var img = this.overlay_.img_;
+
+  resizer.x = this.x + img.width;
+  resizer.y = this.y + img.height;
+  resizer.render();
+
+  this.render();
+
+  this.cx = e.clientX;
+  this.cy = e.clientY;
+};
+
+/**
+ * Enables editing of the resizer's location.
+ *
+ * @private
+ * @param {MouseEvent} e  the event containing coordinates of current mouse
+ * position.
+ */
+overlaytiler.Mover.prototype.onMouseDown_ = function ( e ) {
+  this.cx = e.clientX;
+  this.cy = e.clientY;
+  this.mouseMoveListener_ = google.maps.event.addDomListener( window, 'mousemove', this.onMouseMove_.bind( this ) );
+  google.maps.event.trigger( this, 'dragstart' );
+};
+
+/**
+ * Disables editing of the resizer's location.
+ *
+ * @private
+ */
+overlaytiler.Mover.prototype.onMouseUp_ = function () {
+  if ( this.mouseMoveListener_ ) {
+    google.maps.event.removeListener( this.mouseMoveListener_ );
+  }
+  google.maps.event.trigger( this, 'dragend' );
+};
+
+////////////////////////
 /// The Resizer handles
 ////////////////////////
 
@@ -324,10 +437,7 @@ overlaytiler.Overlay.prototype.setImgBounds = function () {
  * @param img
  * @constructor
  */
-overlaytiler.Resizer = function ( parent, x, y, img ) {
-  this.x = x;
-  this.y = y;
-  this.img_ = img;
+overlaytiler.Resizer = function ( parent, x, y, overlay ) {
 
   var el = this.el_ = document.createElement( 'div' );
   el.className = 'resizer';
@@ -352,6 +462,9 @@ overlaytiler.Resizer = function ( parent, x, y, img ) {
   el.addEventListener( 'mousedown', this.onMouseDown_, true );
   window.addEventListener( 'mouseup', this.onMouseUp_, true );
 
+  this.x = x;
+  this.y = y;
+  this.overlay_ = overlay;
   this.style = el.style;
   this.render();
 };
@@ -367,8 +480,11 @@ overlaytiler.Resizer.prototype.getElement = function () {
  * Renders this resizer to the page, at its location.
  */
 overlaytiler.Resizer.prototype.render = function () {
-  this.style.left = (this.img_.x + this.img_.width) +'px';
-  this.style.top = (this.img_.y + this.img_.height) + 'px';
+  var mover = this.overlay_.mover_;
+  var img = this.overlay_.img_;
+
+  this.style.left = (mover.x + img.width) +'px';
+  this.style.top = (mover.y + img.height) + 'px';
 
   google.maps.event.trigger( this, 'change' );
 };
@@ -415,121 +531,6 @@ overlaytiler.Resizer.prototype.onMouseUp_ = function () {
   }
   google.maps.event.trigger( this, 'dragend' );
 };
-
-////////////////////////
-/// The Mover handle
-////////////////////////
-
-/**
- * Creates a mover (big resizer) that moves a bunch of other resizer.
- *
- * @constructor
- * @param {Node} parent  the element to attach this resizer to.
- * @param {Array.<overlaytiler.Resizer>} resizer  the resizer that should be moved with
- *    this resizer.
- * @extends overlaytiler.Resizer
- */
-overlaytiler.Mover = function ( parent, x, y, resizer, img ) {
-
-  this.x = x;
-  this.y = y;
-  this.resizer_ = resizer;
-  this.img_ = img;
-
-  var el = this.el_ = document.createElement( 'div' );
-  el.className += ' mover';
-  el.innerText += '☐';
-  el.style.position = 'absolute';
-  el.style.color = 'black';
-  el.style.fontSize = '24px';
-  el.style.fontWeight = 'bold';
-  el.style.background = 'yellow';
-  el.style.width = '24px';
-  el.style.height = '24px';
-  el.style.textAlign =  'center';
-  el.style.lineHeight = '1';
-  el.style.margin = '-10px';
-  el.style.cursor = 'move';
-  parent.appendChild( el );
-  el.onMouseMove_ = this.onMouseMove_.bind( el );
-
-  this.element = el;
-
-  this.onMouseMove_ = this.onMouseMove_.bind( this );
-  this.onMouseDown_ = this.onMouseDown_.bind( this );
-  this.onMouseUp_ = this.onMouseUp_.bind( this );
-
-  el.addEventListener( 'mousedown', this.onMouseDown_, true );
-  window.addEventListener( 'mouseup', this.onMouseUp_, true );
-
-  this.render();
-};
-
-/**
- * @returns {HTMLElement|*}
- */
-overlaytiler.Mover.prototype.getElement = function () {
-  return this.el_;
-};
-
-/**
- * Renders this mover to the page, at its location.
- */
-overlaytiler.Mover.prototype.render = function () {
-  this.element.style.left = this.img_.x + 'px';
-  this.element.style.top = this.img_.y + 'px';
-  google.maps.event.trigger( this, 'change' );
-};
-
-/**
- * Moves the resizer to the current mouse position.
- *
- * @private
- * @param {MouseEvent} e  the event containing coordinates of current mouse
- * position.
- */
-overlaytiler.Mover.prototype.onMouseMove_ = function ( e ) {
-  this.x += e.clientX - this.cx;
-  this.y += e.clientY - this.cy;
-
-  var resizer = this.resizer_;
-  resizer.x = this.x + this.img_.width;
-  resizer.y = this.y + this.img_.height;
-
-  this.resizer_.render();
-
-  this.render();
-
-  this.cx = e.clientX;
-  this.cy = e.clientY;
-};
-
-/**
- * Enables editing of the resizer's location.
- *
- * @private
- * @param {MouseEvent} e  the event containing coordinates of current mouse
- * position.
- */
-overlaytiler.Mover.prototype.onMouseDown_ = function ( e ) {
-  this.cx = e.clientX;
-  this.cy = e.clientY;
-  this.mouseMoveListener_ = google.maps.event.addDomListener( window, 'mousemove', this.onMouseMove_.bind( this ) );
-  google.maps.event.trigger( this, 'dragstart' );
-};
-
-/**
- * Disables editing of the resizer's location.
- *
- * @private
- */
-overlaytiler.Mover.prototype.onMouseUp_ = function () {
-  if ( this.mouseMoveListener_ ) {
-    google.maps.event.removeListener( this.mouseMoveListener_ );
-  }
-  google.maps.event.trigger( this, 'dragend' );
-};
-
 
 ////////////////////////
 /// Opacity control
