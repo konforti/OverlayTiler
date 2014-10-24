@@ -51,16 +51,16 @@ function OverlayTiler( data, map ) {
   this.data_ = data;
 
   img.onload = function () {
+
+    // Add the opacity control.
     var opacity = new Opacity( self );
     map.controls[google.maps.ControlPosition.BOTTOM_LEFT].push( opacity.getElement() );
     self.opacity_ = opacity;
 
-    google.maps.event.addListener( map, 'zoom_changed', function () {
-      self.calibrationRenderImage_();
-    } );
-
+    // Engage the layer to the map.
     self.setMap( map );
 
+    // Invoke afterLoad hook.
     if ( self.afterLoad ) {
       self.afterLoad();
     }
@@ -123,6 +123,11 @@ OverlayTiler.prototype.onAdd = function () {
   google.maps.event.addListener( resizer, 'change',
       this.renderImage_.bind( this ) );
 
+  // On map zoom, we render the image calibrated to the map.
+  var map = this.getMap();
+  google.maps.event.addListener( map, 'zoom_changed',
+    this.calibrationRenderImage_.bind( this ) );
+
   this.renderImage_();
   this.setImgBounds();
 
@@ -144,28 +149,29 @@ OverlayTiler.prototype.calibrationRenderImage_ = function () {
   var bounds = this.bounds_;
   var proj = this.getProjection();
 
-  // Get the pixel size from the image bounds.
-  var sw = proj.fromLatLngToDivPixel( bounds.getSouthWest() );
-  var ne = proj.fromLatLngToDivPixel( bounds.getNorthEast() );
+  if ( bounds && proj ) {
+    // Get the pixel size from the image bounds.
+    var sw = proj.fromLatLngToDivPixel( bounds.getSouthWest() );
+    var ne = proj.fromLatLngToDivPixel( bounds.getNorthEast() );
 
-  // Set the image style.
-  img.style.left = sw.x + 'px';
-  img.style.top = ne.y + 'px';
-  img.style.width = (ne.x - sw.x) + 'px';
+    // Set the image style.
+    img.style.left = sw.x + 'px';
+    img.style.top = ne.y + 'px';
+    img.style.width = (ne.x - sw.x) + 'px';
 
-  // Re-locate the mover handle.
-  mover.x = sw.x;
-  mover.y = ne.y;
-  mover.render();
+    // Re-locate the mover handle.
+    mover.x = sw.x;
+    mover.y = ne.y;
+    mover.render();
 
-  // Re-locate the resizer handle.
-  resizer.x = ne.x;
-  resizer.y = sw.y;
-  resizer.render();
+    // Re-locate the resizer handle.
+    resizer.x = ne.x;
+    resizer.y = sw.y;
+    resizer.render();
 
-  delete this.renderTimeout;
-  google.maps.event.trigger( this, 'change' );
-
+    delete this.renderTimeout;
+    google.maps.event.trigger( this, 'change' );
+  }
 };
 
 /**
@@ -281,10 +287,18 @@ OverlayTiler.prototype.setImgBounds = function () {
   this.bounds_ = new google.maps.LatLngBounds( swBound, neBound );
 }
 
+/**
+ * Get the current image bounds.
+ *
+ * @returns {google.maps.LatLngBounds|*}
+ */
 OverlayTiler.prototype.getImgBounds = function () {
   return this.bounds_;
 }
 
+/**
+ * Destroy this overlay.
+ */
 OverlayTiler.prototype.destroy = function () {
   this.setMap( null );
 }
