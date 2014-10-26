@@ -130,7 +130,6 @@ OverlayTiler.prototype.onAdd = function () {
       this.calibrationRenderImage_.bind( this ) );
 
   this.renderImage_();
-  this.setImgBounds();
 
   // Invoke afterAdd hook.
   if ( this.afterAdd ) {
@@ -187,8 +186,6 @@ OverlayTiler.prototype.renderImage_ = function () {
   }
   this.renderTimeout = window.setTimeout(
       this.forceRenderImage_.bind( this ), 15 );
-
-  this.setImgBounds();
 };
 
 /**
@@ -208,6 +205,8 @@ OverlayTiler.prototype.forceRenderImage_ = function () {
 
   delete this.renderTimeout;
   google.maps.event.trigger( this, 'change' );
+
+  this.setImgBounds();
 
   // Invoke afterRender hook.
   if ( this.afterRender ) {
@@ -455,7 +454,7 @@ function Resizer( parent, x, y, overlay ) {
   this.y = y;
   this.overlay_ = overlay;
   this.style = el.style;
-  this.render();
+  this.renderOnce();
 };
 
 /**
@@ -468,9 +467,22 @@ Resizer.prototype.getElement = function () {
 /**
  * Renders this resizer to the page, at its location.
  */
-Resizer.prototype.render = function () {
+Resizer.prototype.renderOnce = function () {
   this.style.left = this.x + 'px';
   this.style.top = this.y + 'px';
+  google.maps.event.trigger( this, 'change' );
+};
+
+/**
+ * Renders this resizer to the page, at its location.
+ */
+Resizer.prototype.render = function () {
+  var mover = this.overlay_.mover_;
+  var img = this.overlay_.img_;
+
+  this.style.left = (mover.x + img.width) + 'px';
+  this.style.top = (mover.y + img.height) + 'px';
+
   google.maps.event.trigger( this, 'change' );
 };
 
