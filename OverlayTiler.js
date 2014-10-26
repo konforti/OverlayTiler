@@ -49,6 +49,7 @@ function OverlayTiler( data, map ) {
 
   this.img_ = img;
   this.data_ = data;
+  this.map_ = map;
 
   img.onload = function () {
 
@@ -124,9 +125,9 @@ OverlayTiler.prototype.onAdd = function () {
       this.renderImage_.bind( this ) );
 
   // On map zoom, we render the image calibrated to the map.
-  var map = this.getMap();
+  var map = this.map_;
   google.maps.event.addListener( map, 'zoom_changed',
-    this.calibrationRenderImage_.bind( this ) );
+      this.calibrationRenderImage_.bind( this ) );
 
   this.renderImage_();
   this.setImgBounds();
@@ -221,10 +222,7 @@ OverlayTiler.prototype.forceRenderImage_ = function () {
  * @param {boolean} draggable  Whether the map should be draggable.
  */
 OverlayTiler.prototype.setMapDraggable_ = function ( draggable ) {
-  var map = this.getMap();
-  if ( map ) {
-    map.set( 'draggable', draggable );
-  }
+  this.map_.set( 'draggable', draggable );
 };
 
 /**
