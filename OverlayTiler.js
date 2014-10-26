@@ -89,8 +89,8 @@ OverlayTiler.prototype.onAdd = function () {
     var ne = new google.maps.LatLng( this.data_.ne.lat, this.data_.ne.lng );
     var sw = new google.maps.LatLng( this.data_.sw.lat, this.data_.sw.lng );
 
-    topRight = proj.fromLatLngToContainerPixel( ne );
-    bottomLeft = proj.fromLatLngToContainerPixel( sw );
+    topRight = proj.fromLatLngToDivPixel( ne );
+    bottomLeft = proj.fromLatLngToDivPixel( sw );
   }
   else {
     // // Set the bounds defaults.
@@ -469,12 +469,8 @@ Resizer.prototype.getElement = function () {
  * Renders this resizer to the page, at its location.
  */
 Resizer.prototype.render = function () {
-  var mover = this.overlay_.mover_;
-  var img = this.overlay_.img_;
-
-  this.style.left = (mover.x + img.width) + 'px';
-  this.style.top = (mover.y + img.height) + 'px';
-
+  this.style.left = this.x + 'px';
+  this.style.top = this.y + 'px';
   google.maps.event.trigger( this, 'change' );
 };
 
