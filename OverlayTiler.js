@@ -4,34 +4,16 @@
 
 'use strict';
 
+////////////////////////
+/// The Overlay
+////////////////////////
+
 /**
  * Set to OverlayView.
  *
  * @type {google.maps.OverlayView}
  */
 OverlayTiler.prototype = new google.maps.OverlayView;
-
-/**
- * * The overlay should be offset this number of pixels from the left of the map
- * div when first added.
- *
- * @type {number}
- * @private
- */
-OverlayTiler.prototype.DEFAULT_X_ = 100;
-
-/**
- * The overlay should be offset this number of pixels from the top of the map
- * div when first added.
- *
- * @type {number}
- * @private
- */
-OverlayTiler.prototype.DEFAULT_Y_ = 50;
-
-////////////////////////
-/// The Overlay
-////////////////////////
 
 /**
  * A map overlay that allows affine transformations on its image.
@@ -78,6 +60,7 @@ OverlayTiler.prototype.onAdd = function () {
   var proj = this.getProjection();
   var pane = this.getPanes().overlayImage;
   var data = this.data_;
+  var map = this.map_;
 
   // Append the image as a layer to the map.
   this.getPanes().overlayLayer.appendChild( this.img_ );
@@ -85,7 +68,7 @@ OverlayTiler.prototype.onAdd = function () {
   var topRight, bottomLeft, img = this.img_;
 
   if ( data.ne && data.sw && data.ne.lat && data.ne.lng && data.sw.lat && data.sw.lng ) {
-    // Set the bounds from external data.
+    // Set the image bounds from external data.
     var ne = new google.maps.LatLng( this.data_.ne.lat, this.data_.ne.lng );
     var sw = new google.maps.LatLng( this.data_.sw.lat, this.data_.sw.lng );
 
@@ -93,9 +76,10 @@ OverlayTiler.prototype.onAdd = function () {
     bottomLeft = proj.fromLatLngToDivPixel( sw );
   }
   else {
-    // // Set the bounds defaults.
-    topRight = new google.maps.Point( this.DEFAULT_X_ + img.width, this.DEFAULT_Y_ );
-    bottomLeft = new google.maps.Point( this.DEFAULT_X_, this.DEFAULT_Y_ + img.height );
+    // Set the image bounds from map center.
+    var center = proj.fromLatLngToDivPixel( map.getCenter() );
+    topRight = new google.maps.Point( center.x + (img.width / 2), center.y - (img.height / 2) );
+    bottomLeft = new google.maps.Point( center.x - (img.width / 2), center.y + (img.height / 2) );
   }
 
   // The Mover allows the overlay to be translated.
@@ -146,13 +130,13 @@ OverlayTiler.prototype.calibrationRenderImage_ = function () {
   var img = this.img_;
   var resizer = this.resizer_;
   var mover = this.mover_;
-  var bounds = this.bounds_;
+  var imgBounds = this.imgBounds_;
   var proj = this.getProjection();
 
-  if ( bounds && proj ) {
+  if ( imgBounds && proj ) {
     // Get the pixel size from the image bounds.
-    var sw = proj.fromLatLngToDivPixel( bounds.getSouthWest() );
-    var ne = proj.fromLatLngToDivPixel( bounds.getNorthEast() );
+    var sw = proj.fromLatLngToDivPixel( imgBounds.getSouthWest() );
+    var ne = proj.fromLatLngToDivPixel( imgBounds.getNorthEast() );
 
     // Set the image style.
     img.style.left = sw.x + 'px';
@@ -281,7 +265,7 @@ OverlayTiler.prototype.setImgBounds = function () {
   var neBound = proj.fromDivPixelToLatLng( new google.maps.Point( ( mover.x + img.width ), mover.y ) );
 
   // Update the bounds.
-  this.bounds_ = new google.maps.LatLngBounds( swBound, neBound );
+  this.imgBounds_ = new google.maps.LatLngBounds( swBound, neBound );
 }
 
 /**
@@ -290,7 +274,7 @@ OverlayTiler.prototype.setImgBounds = function () {
  * @returns {google.maps.LatLngBounds|*}
  */
 OverlayTiler.prototype.getImgBounds = function () {
-  return this.bounds_;
+  return this.imgBounds_;
 }
 
 /**
